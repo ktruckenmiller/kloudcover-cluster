@@ -3,12 +3,9 @@ kind: aws-ecs-cluster-deployer
 ecs_deployer_version: 0.0.1
 
 cluster:
-  name: dev-kloudcover
+  name: staging-kloudcover
   keypair: boston
-  ##### BELOW THIS IS OPTIONAL
   vpc: vpc-849531e0
-  # also avail in os environ as `AMI`
-  # ami: ami-c5d75bbd
   availability_zones:
     - us-west-2a
     - us-west-2c
@@ -17,7 +14,7 @@ cluster:
     - subnet-9b2938c2
     - subnet-bc3193d8
     - subnet-ed43849b
-    
+
 ec2_instances:
   autoscaling: true
   ebs_mounts:
@@ -33,5 +30,5 @@ ec2_instances:
       bids:
         - instance_type: t3.small
           price: 0.01
-        - instance_type: t3.micro
+        - instance_type: t3.medium
           price: 0.01
