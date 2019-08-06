@@ -5,7 +5,19 @@ ecs_deployer_version: 0.0.1
 cluster:
   name: dev-kloudcover
   keypair: boston
-
+  ##### BELOW THIS IS OPTIONAL
+  vpc: vpc-849531e0
+  # also avail in os environ as `AMI`
+  # ami: ami-c5d75bbd
+  availability_zones:
+    - us-west-2a
+    - us-west-2c
+    - us-west-2b
+  subnets:
+    - subnet-9b2938c2
+    - subnet-bc3193d8
+    - subnet-ed43849b
+    
 ec2_instances:
   autoscaling: true
   ebs_mounts:
