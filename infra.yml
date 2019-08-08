@@ -21,7 +21,10 @@ ec2_instances:
     - name: basic
       device_name: /dev/xvda
       size: 20
-
+  efs_mounts:
+    - name: kloudcover
+      efs_id: fs-df827476
+      local_path: /efs
   spot_fleets:
     - name: main
       desired_weight: 3
