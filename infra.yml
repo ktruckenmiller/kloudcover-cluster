@@ -17,6 +17,7 @@ cluster:
 
 ec2_instances:
   autoscaling: true
+  instance_profile_arn: arn:aws:iam::${AWS::AccountId}:instance-profile/ecsInstanceRole
   ebs_mounts:
     - name: basic
       device_name: /dev/xvda
