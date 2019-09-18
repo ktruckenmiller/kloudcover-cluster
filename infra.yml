@@ -1,9 +1,9 @@
 ---
 kind: aws-ecs-cluster-deployer
 ecs_deployer_version: 0.0.1
-
+# make sure you add the security groups to the ELB and the Database SG
 cluster:
-  name: staging-kloudcover
+  name: production-kloudcover
   keypair: boston
   vpc: vpc-849531e0
   availability_zones:
@@ -29,10 +29,10 @@ ec2_instances:
   spot_fleets:
     - name: main
       desired_weight: 3
-      min_weight: 0
+      min_weight: 2
       max_weight: 16
       bids:
-        - instance_type: t3.small
+        - instance_type: m3.medium
           price: 0.01
-        - instance_type: t3.medium
+        - instance_type: t2.small
           price: 0.01
