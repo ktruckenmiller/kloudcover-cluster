@@ -6,6 +6,7 @@ cluster:
   name: staging-kloudcover
   keypair: boston
   vpc: vpc-849531e0
+  
   availability_zones:
     - us-west-2a
     - us-west-2c
