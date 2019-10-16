@@ -1,6 +1,5 @@
 ---
 kind: aws-ecs-cluster-deployer
-ecs_deployer_version: 0.0.1
 # make sure you add the security groups to the ELB and the Database SG
 cluster:
   name: production-kloudcover
