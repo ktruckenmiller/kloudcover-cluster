@@ -32,6 +32,6 @@ ec2_instances:
       max_weight: 16
       bids:
         - instance_type: t2.medium
-          price: 0.01
+          price: 0.03
         # - instance_type: t3.small
         #   price: 0.01
