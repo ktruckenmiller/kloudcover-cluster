@@ -26,6 +26,13 @@ ec2_instances:
       efs_id: fs-df827476
       local_path: /efs
   spot_fleets:
+    - name: drone
+      desired_weight: 1
+      min_weight: 1
+      max_weight: 1
+      bids:
+        - instance_type: t2.medium
+          price: 0.01
     - name: main
       desired_weight: 3
       min_weight: 2
