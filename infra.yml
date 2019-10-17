@@ -6,7 +6,7 @@ cluster:
   name: staging-kloudcover
   keypair: boston
   vpc: vpc-849531e0
-  
+
   availability_zones:
     - us-west-2a
     - us-west-2c
@@ -35,5 +35,5 @@ ec2_instances:
       bids:
         - instance_type: m3.medium
           price: 0.01
-        - instance_type: t2.medium
+        - instance_type: t3.small
           price: 0.01
