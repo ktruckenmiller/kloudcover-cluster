@@ -30,6 +30,8 @@ ec2_instances:
   spot_fleets:
     - name: main
       desired_weight: 3
+      task_threshold_out: 2
+      task_threshold_in: 15
       min_weight: 0
       max_weight: 16
       bids:
