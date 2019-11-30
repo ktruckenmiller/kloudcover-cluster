@@ -25,6 +25,7 @@ ec2_instances:
     - name: kloudcover
       efs_id: fs-df827476
       local_path: /efs
+      
   spot_fleets:
     - name: main
       desired_weight: 3
