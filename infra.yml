@@ -34,5 +34,5 @@ ec2_instances:
       bids:
         - instance_type: t3a.medium
           price: 0.03
-        - instance_type: t2.medium
-          price: 0.015
+        # - instance_type: t2.medium
+        #   price: 0.015
