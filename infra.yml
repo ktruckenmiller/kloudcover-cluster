@@ -28,7 +28,7 @@ ec2_instances:
 
   spot_fleets:
     - name: main
-      desired_weight: 4
+      desired_weight: 3
       min_weight: 2
       max_weight: 16
       bids:
