@@ -36,7 +36,7 @@ ec2_instances:
       min_weight: 1
       max_weight: 16
       bids:
-        - instance_type: m6g.medium
-          price: 0.02
-        # - instance_type: t3a.small
-        #   price: 0.01
+        # - instance_type: m6g.medium
+        #   price: 0.02
+        - instance_type: t3a.small
+          price: 0.01
