@@ -5,12 +5,13 @@ import aws_cdk as cdk
 
 from infra.cluster import ECSCluster
 
+environment = os.environ.get("ENVIRON", "staging")
 
 app = cdk.App()
 ECSCluster(
     app,
-    "cluster-stack",
-    environment="stage",
+    f"{environment}-cluster",
+    environment=environment,
     env=cdk.Environment(account="601394826940", region="us-west-2"),
 )
 

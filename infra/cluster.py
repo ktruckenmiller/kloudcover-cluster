@@ -24,6 +24,19 @@ class ECSCluster(Stack):
             vpc_id="vpc-849531e0",
             # availability_zones=["us-west-2a", "us-west-2b", "us-west-2c"],
         )
+        self.alb_sg = ec2.SecurityGroup.from_security_group_id(
+            self, "ALBSG", security_group_id="sg-d8ab3ca5", mutable=True
+        )
+        self.db_sg = ec2.SecurityGroup.from_security_group_id(
+            self, "DBSG", security_group_id="sg-059aa6ca5b014187b"
+        )
+        self.default_role = iam.Role.from_role_arn(
+            self,
+            "ImportedRole",
+            role_arn=cdk.Fn.sub(
+                "arn:aws:iam::${AWS::AccountId}:instance-profile/ecsInstanceRole"
+            ),
+        )
         self.file_system = efs.FileSystem.from_file_system_attributes(
             self,
             "Files",
@@ -34,32 +47,38 @@ class ECSCluster(Stack):
         )
         self.cluster = self.get_cluster()
 
-    def get_cluster(self):
-        cluster = ecs.Cluster(
-            self,
-            "KloudCoverCluster",
-            container_insights=True,
-            cluster_name=f"{self.environ}-kloudcover-v1",
-            vpc=self.vpc,
-        )
-        role = iam.Role.from_role_arn(
-            self,
-            "ImportedRole",
-            role_arn=cdk.Fn.sub(
-                "arn:aws:iam::${AWS::AccountId}:instance-profile/ecsInstanceRole"
-            ),
-        )
+    def get_asg(
+        self,
+        asg_name: str,
+        asg_sg: ec2.SecurityGroup,
+        spot_price: str,
+        instance_size: str,
+    ):
         auto_scaling_group = autoscaling.AutoScalingGroup(
             self,
-            "ASG",
+            f"{asg_name}ASG",
             vpc=self.vpc,
-            instance_type=ec2.InstanceType("t3a.small"),
+            instance_type=ec2.InstanceType.of(
+                ec2.InstanceClass.BURSTABLE3_AMD,
+                getattr(ec2.InstanceSize, instance_size),
+            ),
             machine_image=ecs.EcsOptimizedImage.amazon_linux2(),
+            # desired_capacity=0,
             min_capacity=0,
             max_capacity=6,
-            role=role,
-            spot_price="0.01",
+            role=self.default_role,
+            spot_price="0.015",
+            group_metrics=[
+                autoscaling.GroupMetrics(
+                    autoscaling.GroupMetric.MIN_SIZE,
+                    autoscaling.GroupMetric.MAX_SIZE,
+                    autoscaling.GroupMetric.DESIRED_CAPACITY,
+                    autoscaling.GroupMetric.TOTAL_INSTANCES,
+                )
+            ],
         )
+        auto_scaling_group.add_security_group(asg_sg)
+        auto_scaling_group.add_security_group(self.db_sg)
         self.file_system.connections.allow_default_port_from(auto_scaling_group)
         auto_scaling_group.user_data.add_commands(
             "yum check-update -y",
@@ -70,15 +89,35 @@ class ECSCluster(Stack):
             f'test -f "/sbin/mount.efs" && echo "{self.file_system.file_system_id}:/ /efs efs defaults,_netdev" >> /etc/fstab || echo "{self.file_system.file_system_id}.efs.{self.region}.amazonaws.com:/ /efs nfs4 nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport,_netdev 0 0" >> /etc/fstab',
             "mount -a -t efs,nfs4 defaults",
         )
-
         capacity_provider = ecs.AsgCapacityProvider(
             self,
-            "AsgCapacityProvider",
+            f"{asg_name}AsgCapacityProvider",
             auto_scaling_group=auto_scaling_group,
             enable_managed_scaling=True,
             enable_managed_termination_protection=True,
             can_containers_access_instance_role=True,
             spot_instance_draining=True,
         )
-        cluster.add_asg_capacity_provider(capacity_provider)
+        return auto_scaling_group, capacity_provider
+
+    def get_cluster(self):
+        cluster = ecs.Cluster(
+            self,
+            "KloudCoverCluster",
+            container_insights=True,
+            cluster_name=f"{self.environ}-kloudcover-v3",
+            vpc=self.vpc,
+        )
+
+        sg = ec2.SecurityGroup(self, "SG", allow_all_outbound=True, vpc=self.vpc)
+        sg.add_ingress_rule(
+            peer=self.alb_sg,
+            connection=ec2.Port.all_traffic(),
+            description="Allow inbound HTTPS",
+        )
+        cap_providers = []
+        for asg_name in ["medium", "small"]:
+            asg_obj, cap_obj = self.get_asg(asg_name, sg, "0.015", asg_name.upper())
+            cluster.add_asg_capacity_provider(provider=cap_obj)
+
         return cluster
