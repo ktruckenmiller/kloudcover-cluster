@@ -59,23 +59,28 @@ class ECSCluster(Stack):
             f"{asg_name}ASG",
             vpc=self.vpc,
             instance_type=ec2.InstanceType.of(
-                ec2.InstanceClass.BURSTABLE3_AMD,
+                ec2.InstanceClass.BURSTABLE4_GRAVITON,
                 getattr(ec2.InstanceSize, instance_size),
             ),
-            machine_image=ecs.EcsOptimizedImage.amazon_linux2(),
+            block_devices=[
+                autoscaling.BlockDevice(
+                    device_name="/dev/xvda",
+                    volume=autoscaling.BlockDeviceVolume.ebs(
+                        delete_on_termination=True,
+                        encrypted=False,
+                        volume_size=30,
+                        volume_type=autoscaling.EbsDeviceVolumeType.GP3,
+                    ),
+                )
+            ],
+            machine_image=ecs.EcsOptimizedImage.amazon_linux2(ecs.AmiHardwareType.ARM),
             # desired_capacity=0,
-            min_capacity=0,
+            min_capacity=2,
             max_capacity=6,
             role=self.default_role,
             spot_price="0.015",
-            group_metrics=[
-                autoscaling.GroupMetrics(
-                    autoscaling.GroupMetric.MIN_SIZE,
-                    autoscaling.GroupMetric.MAX_SIZE,
-                    autoscaling.GroupMetric.DESIRED_CAPACITY,
-                    autoscaling.GroupMetric.TOTAL_INSTANCES,
-                )
-            ],
+            group_metrics=[autoscaling.GroupMetrics.all()],
+            update_policy=autoscaling.UpdatePolicy.rolling_update(),
         )
         auto_scaling_group.add_security_group(asg_sg)
         auto_scaling_group.add_security_group(self.db_sg)
@@ -94,7 +99,7 @@ class ECSCluster(Stack):
             f"{asg_name}AsgCapacityProvider",
             auto_scaling_group=auto_scaling_group,
             enable_managed_scaling=True,
-            enable_managed_termination_protection=True,
+            # enable_managed_termination_protection=True,
             can_containers_access_instance_role=True,
             spot_instance_draining=True,
         )
@@ -116,8 +121,8 @@ class ECSCluster(Stack):
             description="Allow inbound HTTPS",
         )
         cap_providers = []
-        for asg_name in ["medium", "small"]:
-            asg_obj, cap_obj = self.get_asg(asg_name, sg, "0.015", asg_name.upper())
+        for asg_name in ["small"]:
+            asg_obj, cap_obj = self.get_asg(asg_name, sg, "0.010", asg_name.upper())
             cluster.add_asg_capacity_provider(provider=cap_obj)
 
         return cluster
