@@ -1,14 +1,10 @@
 ---
 kind: aws-ecs-cluster-deployer
-ecs_deployer_version: 0.0.1
-
+# make sure you add the security groups to the ELB and the Database SG
 cluster:
-  name: dev-kloudcover
+  name: production-kloudcover
   keypair: boston
-  ##### BELOW THIS IS OPTIONAL
   vpc: vpc-849531e0
-  # also avail in os environ as `AMI`
-  # ami: ami-c5d75bbd
   availability_zones:
     - us-west-2a
     - us-west-2c
@@ -17,21 +13,26 @@ cluster:
     - subnet-9b2938c2
     - subnet-bc3193d8
     - subnet-ed43849b
-    
+
 ec2_instances:
   autoscaling: true
+  instance_profile_arn: arn:aws:iam::${AWS::AccountId}:instance-profile/ecsInstanceRole
   ebs_mounts:
     - name: basic
       device_name: /dev/xvda
       size: 20
+  efs_mounts:
+    - name: kloudcover
+      efs_id: fs-df827476
+      local_path: /efs
 
   spot_fleets:
     - name: main
       desired_weight: 3
-      min_weight: 0
+      min_weight: 2
       max_weight: 16
       bids:
-        - instance_type: t3.small
-          price: 0.01
-        - instance_type: t3.micro
-          price: 0.01
+        - instance_type: t3a.medium
+          price: 0.03
+        # - instance_type: t2.medium
+        #   price: 0.015
