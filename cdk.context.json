@@ -33,5 +33,8 @@
   "security-group:account=601394826940:region=us-west-2:securityGroupId=sg-0def9e6b": {
     "securityGroupId": "sg-0def9e6b",
     "allowAllOutbound": false
-  }
+  },
+  "acknowledged-issue-numbers": [
+    21902
+  ]
 }

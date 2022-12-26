@@ -100,7 +100,7 @@ class ECSCluster(Stack):
             auto_scaling_group=auto_scaling_group,
             enable_managed_scaling=True,
             # enable_managed_termination_protection=True,
-            can_containers_access_instance_role=True,
+            can_containers_access_instance_role=False,
             spot_instance_draining=True,
         )
         return auto_scaling_group, capacity_provider
@@ -109,7 +109,7 @@ class ECSCluster(Stack):
         cluster = ecs.Cluster(
             self,
             "KloudCoverCluster",
-            container_insights=True,
+            container_insights=False,
             cluster_name=f"{self.environ}-kloudcover-v3",
             vpc=self.vpc,
         )
