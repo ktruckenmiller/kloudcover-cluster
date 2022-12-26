@@ -1,6 +1,6 @@
 import aws_cdk as cdk
 from aws_cdk import (
-    # Duration,
+    Duration,
     Stack,
     aws_ecs as ecs,
     aws_ec2 as ec2,
@@ -73,14 +73,18 @@ class ECSCluster(Stack):
                     ),
                 )
             ],
+            instance_monitoring=autoscaling.Monitoring.BASIC,
             machine_image=ecs.EcsOptimizedImage.amazon_linux2(ecs.AmiHardwareType.ARM),
-            # desired_capacity=0,
             min_capacity=2,
             max_capacity=6,
             role=self.default_role,
             spot_price="0.015",
-            group_metrics=[autoscaling.GroupMetrics.all()],
-            update_policy=autoscaling.UpdatePolicy.rolling_update(),
+            new_instances_protected_from_scale_in=False,
+            update_policy=autoscaling.UpdatePolicy.rolling_update(
+                max_batch_size=2,
+                min_instances_in_service=2,
+            ),
+            signals=autoscaling.Signals.wait_for_all(timeout=Duration.minutes(5)),
         )
         auto_scaling_group.add_security_group(asg_sg)
         auto_scaling_group.add_security_group(self.db_sg)
