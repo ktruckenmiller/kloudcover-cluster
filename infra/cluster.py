@@ -81,23 +81,28 @@ class ECSCluster(Stack):
             spot_price="0.015",
             new_instances_protected_from_scale_in=False,
             update_policy=autoscaling.UpdatePolicy.rolling_update(
-                max_batch_size=2,
-                min_instances_in_service=2,
+                max_batch_size=1,
             ),
             signals=autoscaling.Signals.wait_for_all(timeout=Duration.minutes(5)),
         )
         auto_scaling_group.add_security_group(asg_sg)
         auto_scaling_group.add_security_group(self.db_sg)
         self.file_system.connections.allow_default_port_from(auto_scaling_group)
+
         auto_scaling_group.user_data.add_commands(
+            # "set -e",
+            "yum install -y aws-cfn-bootstrap",
             "yum check-update -y",
-            "yum upgrade -y",
-            "yum install -y amazon-efs-utils",
-            "yum install -y nfs-utils",
-            "mkdir -p /efs",
-            f'test -f "/sbin/mount.efs" && echo "{self.file_system.file_system_id}:/ /efs efs defaults,_netdev" >> /etc/fstab || echo "{self.file_system.file_system_id}.efs.{self.region}.amazonaws.com:/ /efs nfs4 nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport,_netdev 0 0" >> /etc/fstab',
-            "mount -a -t efs,nfs4 defaults",
+            "yum update -y && yum upgrade -y",
+            "yum install -y amazon-efs-utils aws-cli jq yum-utils && yum install -y nfs-utils",
+            f"mkdir -p /efs && test -f '/sbin/mount.efs' && echo '{self.file_system.file_system_id}:/ /efs efs defaults,_netdev' >> /etc/fstab || echo '{self.file_system.file_system_id}.efs.us-west-2.amazonaws.com:/ /efs nfs4 nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport,_netdev 0 0' >> /etc/fstab && mount -a -t efs,nfs4 defaults",
+            "yum-config-manager --add-repo https://pkgs.tailscale.com/stable/amazon-linux/2/tailscale.repo",
+            "yum install tailscale -y",
+            "systemctl enable --now tailscaled",
+            "tailscale up --authkey=$(aws secretsmanager get-secret-value --secret-id tailscale --region us-west-2 --query SecretString --output text | jq -r .AUTH_KEY)",
         )
+        auto_scaling_group.user_data.add_signal_on_exit_command(auto_scaling_group)
+
         capacity_provider = ecs.AsgCapacityProvider(
             self,
             f"{asg_name}AsgCapacityProvider",
