@@ -1,0 +1,20 @@
+version: "3"
+
+tasks:
+  setup-env:
+    cmds:
+      - python3 -m venv .venv
+      - source .venv/bin/activate
+      - pip install -r requirements.txt
+
+  setup-cdk:
+    cmds:
+      - |
+        if ! cdk --version; then
+          pip install aws-cdk.core
+        fi
+
+  cdk-diff:
+    cmds:
+      - source .venv/bin/activate
+      - cdk diff
