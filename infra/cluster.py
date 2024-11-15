@@ -62,6 +62,7 @@ class ECSCluster(Stack):
                 ec2.InstanceClass.BURSTABLE4_GRAVITON,
                 getattr(ec2.InstanceSize, instance_size),
             ),
+            # ami-0471a77d3078a03ba
             block_devices=[
                 autoscaling.BlockDevice(
                     device_name="/dev/xvda",
@@ -74,11 +75,14 @@ class ECSCluster(Stack):
                 )
             ],
             instance_monitoring=autoscaling.Monitoring.BASIC,
-            machine_image=ecs.EcsOptimizedImage.amazon_linux2(ecs.AmiHardwareType.ARM),
+            machine_image=ecs.EcsOptimizedImage.amazon_linux2023(
+                ecs.AmiHardwareType.ARM
+            ),
             min_capacity=2,
             max_capacity=6,
+            capacity_rebalance=True,
             role=self.default_role,
-            spot_price="0.015",
+            spot_price="0.018",
             new_instances_protected_from_scale_in=False,
             update_policy=autoscaling.UpdatePolicy.rolling_update(
                 max_batch_size=1,
@@ -96,10 +100,12 @@ class ECSCluster(Stack):
             "yum update -y && yum upgrade -y",
             "yum install -y amazon-efs-utils aws-cli jq yum-utils && yum install -y nfs-utils",
             f"mkdir -p /efs && test -f '/sbin/mount.efs' && echo '{self.file_system.file_system_id}:/ /efs efs defaults,_netdev' >> /etc/fstab || echo '{self.file_system.file_system_id}.efs.us-west-2.amazonaws.com:/ /efs nfs4 nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport,_netdev 0 0' >> /etc/fstab && mount -a -t efs,nfs4 defaults",
-            "yum-config-manager --add-repo https://pkgs.tailscale.com/stable/amazon-linux/2/tailscale.repo",
-            "yum install tailscale -y",
-            "systemctl enable --now tailscaled",
-            "tailscale up --authkey=$(aws secretsmanager get-secret-value --secret-id tailscale --region us-west-2 --query SecretString --output text | jq -r .AUTH_KEY)",
+            # "yum-config-manager --add-repo https://pkgs.tailscale.com/stable/amazon-linux/2/tailscale.repo",
+            # "echo $PATH",
+            # "until docker ps | grep amazon-ecs-agent; do sleep 1; done",
+            # "yum install tailscale -y",
+            # "systemctl enable --now tailscaled",
+            # '\ntailscale up --auth-key="$(aws secretsmanager get-secret-value --secret-id tailscale --region us-west-2 --query SecretString --output text | jq -r .CLIENT_SECRET)?ephemeral=true&preauthorized=true" --advertise-tags=tag:ecs-deployer  --accept-routes=true',
         )
         auto_scaling_group.user_data.add_signal_on_exit_command(auto_scaling_group)
 
@@ -108,6 +114,7 @@ class ECSCluster(Stack):
             f"{asg_name}AsgCapacityProvider",
             auto_scaling_group=auto_scaling_group,
             enable_managed_scaling=True,
+            # enable_managed_draining=True,
             # enable_managed_termination_protection=True,
             can_containers_access_instance_role=False,
             spot_instance_draining=True,
