@@ -37,5 +37,73 @@
   "acknowledged-issue-numbers": [
     21902,
     22090
-  ]
+  ],
+  "vpc-provider:account=601394826940:filter.vpc-id=vpc-0cb5fe5c0a27a66da:region=us-west-2:returnAsymmetricSubnets=true": {
+    "vpcId": "vpc-0cb5fe5c0a27a66da",
+    "vpcCidrBlock": "10.79.0.0/16",
+    "ownerAccountId": "601394826940",
+    "availabilityZones": [],
+    "subnetGroups": [
+      {
+        "name": "Isolated",
+        "type": "Isolated",
+        "subnets": [
+          {
+            "subnetId": "subnet-0586299532a41a563",
+            "cidr": "10.79.128.0/19",
+            "availabilityZone": "us-west-2a",
+            "routeTableId": "rtb-0930db31c0b59c698"
+          },
+          {
+            "subnetId": "subnet-04b47274d63b6377c",
+            "cidr": "10.79.160.0/19",
+            "availabilityZone": "us-west-2b",
+            "routeTableId": "rtb-09159988226fa0c17"
+          },
+          {
+            "subnetId": "subnet-0ab3abefba00e70b5",
+            "cidr": "10.79.192.0/19",
+            "availabilityZone": "us-west-2c",
+            "routeTableId": "rtb-08bcae83a5dba28ed"
+          },
+          {
+            "subnetId": "subnet-0d70957f637cca9c5",
+            "cidr": "10.79.224.0/19",
+            "availabilityZone": "us-west-2d",
+            "routeTableId": "rtb-0dc01b8589a4d43b6"
+          }
+        ]
+      },
+      {
+        "name": "Public",
+        "type": "Public",
+        "subnets": [
+          {
+            "subnetId": "subnet-03f1f553768bd8d8a",
+            "cidr": "10.79.0.0/19",
+            "availabilityZone": "us-west-2a",
+            "routeTableId": "rtb-0a7981f42928b1e99"
+          },
+          {
+            "subnetId": "subnet-0ec849b960adf2923",
+            "cidr": "10.79.32.0/19",
+            "availabilityZone": "us-west-2b",
+            "routeTableId": "rtb-01a2356d59d8a21ed"
+          },
+          {
+            "subnetId": "subnet-0e5d257bb0f8592f0",
+            "cidr": "10.79.64.0/19",
+            "availabilityZone": "us-west-2c",
+            "routeTableId": "rtb-087e1c12ddcc7921a"
+          },
+          {
+            "subnetId": "subnet-0e0283f6cea2b0abb",
+            "cidr": "10.79.96.0/19",
+            "availabilityZone": "us-west-2d",
+            "routeTableId": "rtb-0fb2c25ec7ef9fc1d"
+          }
+        ]
+      }
+    ]
+  }
 }
