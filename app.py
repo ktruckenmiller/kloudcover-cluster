@@ -14,7 +14,7 @@ for environment in ["staging", "production"]:
         environment=environment,
         env=cdk.Environment(account="601394826940", region="us-west-2"),
     )
-    ECSClusterV2(
+    ECSClusterV4(
         app,
         f"{environment}-cluster-v2",
         environment=environment,

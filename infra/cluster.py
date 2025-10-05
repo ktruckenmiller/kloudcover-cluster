@@ -100,6 +100,12 @@ class ECSCluster(Stack):
             "yum update -y && yum upgrade -y",
             "yum install -y amazon-efs-utils aws-cli jq yum-utils && yum install -y nfs-utils",
             f"mkdir -p /efs && test -f '/sbin/mount.efs' && echo '{self.file_system.file_system_id}:/ /efs efs defaults,_netdev' >> /etc/fstab || echo '{self.file_system.file_system_id}.efs.us-west-2.amazonaws.com:/ /efs nfs4 nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport,_netdev 0 0' >> /etc/fstab && mount -a -t efs,nfs4 defaults",
+            # "yum-config-manager --add-repo https://pkgs.tailscale.com/stable/amazon-linux/2/tailscale.repo",
+            # "echo $PATH",
+            # "until docker ps | grep amazon-ecs-agent; do sleep 1; done",
+            # "yum install tailscale -y",
+            # "systemctl enable --now tailscaled",
+            # '\ntailscale up --auth-key="$(aws secretsmanager get-secret-value --secret-id tailscale --region us-west-2 --query SecretString --output text | jq -r .CLIENT_SECRET)?ephemeral=true&preauthorized=true" --advertise-tags=tag:ecs-deployer  --accept-routes=true',
         )
         auto_scaling_group.user_data.add_signal_on_exit_command(auto_scaling_group)
 
@@ -110,7 +116,6 @@ class ECSCluster(Stack):
             enable_managed_scaling=True,
             # enable_managed_draining=True,
             # enable_managed_termination_protection=True,
-            can_containers_access_instance_role=False,
             spot_instance_draining=True,
         )
         return auto_scaling_group, capacity_provider
@@ -119,8 +124,7 @@ class ECSCluster(Stack):
         cluster = ecs.Cluster(
             self,
             "KloudCoverCluster",
-            container_insights=False,
-            cluster_name=f"{self.environ}-kloudcover-v4",
+            cluster_name=f"{self.environ}-kloudcover-v3",
             vpc=self.vpc,
         )
 
@@ -131,8 +135,8 @@ class ECSCluster(Stack):
             description="Allow inbound HTTPS",
         )
         cap_providers = []
-        # for asg_name in ["small"]:
-        #     asg_obj, cap_obj = self.get_asg(asg_name, sg, "0.010", asg_name.upper())
-        #     cluster.add_asg_capacity_provider(provider=cap_obj)
+        for asg_name in ["small"]:
+            asg_obj, cap_obj = self.get_asg(asg_name, sg, "0.010", asg_name.upper())
+            cluster.add_asg_capacity_provider(provider=cap_obj)
 
         return cluster
