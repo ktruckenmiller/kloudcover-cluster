@@ -3,4 +3,4 @@ version: "3"
 tasks:
   diff:
     cmds:
-      - cdk diff
+      - npx cdk diff {{.CLI_ARGS}}
