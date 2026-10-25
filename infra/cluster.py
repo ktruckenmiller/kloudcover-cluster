@@ -62,6 +62,7 @@ class ECSCluster(Stack):
                 ecs.AmiHardwareType.ARM
             ),
             role=self.default_role,
+            detailed_monitoring=False,
             security_group=asg_sg,
             user_data=ec2.UserData.for_linux(),
             block_devices=[
@@ -108,7 +109,7 @@ class ECSCluster(Stack):
             update_policy=autoscaling.UpdatePolicy.rolling_update(
                 max_batch_size=1,
             ),
-            signals=autoscaling.Signals.wait_for_all(timeout=Duration.minutes(5)),
+            signals=autoscaling.Signals.wait_for_count(2, timeout=Duration.minutes(5)),
         )
         self.file_system.connections.allow_default_port_from(auto_scaling_group)
 
@@ -150,6 +151,8 @@ class ECSCluster(Stack):
         )
         for asg_name in ["small"]:
             asg_obj, cap_obj = self.get_asg(asg_name, sg, "0.010", asg_name.upper())
-            cluster.add_asg_capacity_provider(provider=cap_obj)
+            cluster.add_asg_capacity_provider(
+                provider=cap_obj, can_containers_access_instance_role=True
+            )
 
         return cluster
