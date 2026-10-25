@@ -7,9 +7,10 @@ from aws_cdk import (
     aws_iam as iam,
     aws_efs as efs,
     aws_autoscaling as autoscaling,
-    # aws_sqs as sqs,
 )
 from constructs import Construct
+
+MIN_CAPACITY = {"staging": 3, "production": 2}
 
 
 class ECSCluster(Stack):
@@ -47,6 +48,37 @@ class ECSCluster(Stack):
         )
         self.cluster = self.get_cluster()
 
+    def get_launch_template(
+        self, asg_name: str, asg_sg: ec2.SecurityGroup, instance_size: str
+    ) -> ec2.LaunchTemplate:
+        launch_template = ec2.LaunchTemplate(
+            self,
+            f"{asg_name}LaunchTemplate",
+            instance_type=ec2.InstanceType.of(
+                ec2.InstanceClass.BURSTABLE4_GRAVITON,
+                getattr(ec2.InstanceSize, instance_size),
+            ),
+            machine_image=ecs.EcsOptimizedImage.amazon_linux2023(
+                ecs.AmiHardwareType.ARM
+            ),
+            role=self.default_role,
+            security_group=asg_sg,
+            user_data=ec2.UserData.for_linux(),
+            block_devices=[
+                ec2.BlockDevice(
+                    device_name="/dev/xvda",
+                    volume=ec2.BlockDeviceVolume.ebs(
+                        delete_on_termination=True,
+                        encrypted=False,
+                        volume_size=30,
+                        volume_type=ec2.EbsDeviceVolumeType.GP3,
+                    ),
+                )
+            ],
+        )
+        launch_template.add_security_group(self.db_sg)
+        return launch_template
+
     def get_asg(
         self,
         asg_name: str,
@@ -58,39 +90,26 @@ class ECSCluster(Stack):
             self,
             f"{asg_name}ASG",
             vpc=self.vpc,
-            instance_type=ec2.InstanceType.of(
-                ec2.InstanceClass.BURSTABLE4_GRAVITON,
-                getattr(ec2.InstanceSize, instance_size),
+            mixed_instances_policy=autoscaling.MixedInstancesPolicy(
+                launch_template=self.get_launch_template(
+                    asg_name, asg_sg, instance_size
+                ),
+                instances_distribution=autoscaling.InstancesDistribution(
+                    on_demand_base_capacity=0,
+                    on_demand_percentage_above_base_capacity=0,
+                    spot_allocation_strategy=autoscaling.SpotAllocationStrategy.PRICE_CAPACITY_OPTIMIZED,
+                    spot_max_price=spot_price,
+                ),
             ),
-            # ami-0471a77d3078a03ba
-            block_devices=[
-                autoscaling.BlockDevice(
-                    device_name="/dev/xvda",
-                    volume=autoscaling.BlockDeviceVolume.ebs(
-                        delete_on_termination=True,
-                        encrypted=False,
-                        volume_size=30,
-                        volume_type=autoscaling.EbsDeviceVolumeType.GP3,
-                    ),
-                )
-            ],
-            instance_monitoring=autoscaling.Monitoring.BASIC,
-            machine_image=ecs.EcsOptimizedImage.amazon_linux2023(
-                ecs.AmiHardwareType.ARM
-            ),
-            min_capacity=2,
+            min_capacity=MIN_CAPACITY[self.environ],
             max_capacity=6,
             capacity_rebalance=True,
-            role=self.default_role,
-            spot_price="0.018",
             new_instances_protected_from_scale_in=False,
             update_policy=autoscaling.UpdatePolicy.rolling_update(
                 max_batch_size=1,
             ),
             signals=autoscaling.Signals.wait_for_all(timeout=Duration.minutes(5)),
         )
-        auto_scaling_group.add_security_group(asg_sg)
-        auto_scaling_group.add_security_group(self.db_sg)
         self.file_system.connections.allow_default_port_from(auto_scaling_group)
 
         auto_scaling_group.user_data.add_commands(
@@ -100,12 +119,6 @@ class ECSCluster(Stack):
             "yum update -y && yum upgrade -y",
             "yum install -y amazon-efs-utils aws-cli jq yum-utils && yum install -y nfs-utils",
             f"mkdir -p /efs && test -f '/sbin/mount.efs' && echo '{self.file_system.file_system_id}:/ /efs efs defaults,_netdev' >> /etc/fstab || echo '{self.file_system.file_system_id}.efs.us-west-2.amazonaws.com:/ /efs nfs4 nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport,_netdev 0 0' >> /etc/fstab && mount -a -t efs,nfs4 defaults",
-            # "yum-config-manager --add-repo https://pkgs.tailscale.com/stable/amazon-linux/2/tailscale.repo",
-            # "echo $PATH",
-            # "until docker ps | grep amazon-ecs-agent; do sleep 1; done",
-            # "yum install tailscale -y",
-            # "systemctl enable --now tailscaled",
-            # '\ntailscale up --auth-key="$(aws secretsmanager get-secret-value --secret-id tailscale --region us-west-2 --query SecretString --output text | jq -r .CLIENT_SECRET)?ephemeral=true&preauthorized=true" --advertise-tags=tag:ecs-deployer  --accept-routes=true',
         )
         auto_scaling_group.user_data.add_signal_on_exit_command(auto_scaling_group)
 
@@ -126,6 +139,7 @@ class ECSCluster(Stack):
             "KloudCoverCluster",
             cluster_name=f"{self.environ}-kloudcover-v3",
             vpc=self.vpc,
+            container_insights_v2=ecs.ContainerInsights.DISABLED,
         )
 
         sg = ec2.SecurityGroup(self, "SG", allow_all_outbound=True, vpc=self.vpc)
@@ -134,7 +148,6 @@ class ECSCluster(Stack):
             connection=ec2.Port.all_traffic(),
             description="Allow inbound HTTPS",
         )
-        cap_providers = []
         for asg_name in ["small"]:
             asg_obj, cap_obj = self.get_asg(asg_name, sg, "0.010", asg_name.upper())
             cluster.add_asg_capacity_provider(provider=cap_obj)
