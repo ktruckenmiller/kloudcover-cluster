@@ -1,0 +1,6 @@
+version: "3"
+
+tasks:
+  diff:
+    cmds:
+      - npx cdk diff {{.CLI_ARGS}}
